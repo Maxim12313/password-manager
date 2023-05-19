@@ -10,7 +10,7 @@ import java.security.spec.InvalidKeySpecException;
 
 public class PasswordServer {
     private ServerSocket serverSocket;
-    
+
     public void start(int port) throws IOException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, InvalidKeyException {
         serverSocket = new ServerSocket(port);
         while (true){
