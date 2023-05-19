@@ -1,20 +1,7 @@
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
-import java.util.Arrays;
-import java.util.Base64;
 
 public class GUI {
 
@@ -25,6 +12,9 @@ public class GUI {
     JFrame myJFrame = new JFrame("Password Manager");
     JPanel myPanel = new JPanel();
     Manager manager;
+    PasswordClient client;
+    int port = 50501;
+    String ip = "127.0.0.1";
 
     GUI(){
         myPanel.setLayout(new BoxLayout(myPanel,BoxLayout.Y_AXIS));
@@ -78,31 +68,17 @@ public class GUI {
             String username = ((EntryText)myPanel.getComponent(3)).getText();
             String password = ((EntryText)myPanel.getComponent(5)).getText();
 
-            for (String field:new String[]{domain,username,password}){
-                if (field.length()==0){
-                    System.out.println("empty fields");
-                    return;
-                }
+            if (domain.length()==0 || username.length()==0 || password.length()==0) {
+                System.out.println("empty fields");
+                return;
             }
 
             try {
-                manager.createNewEntry(domain,username,password);
-                manager.readEntry(domain);
-            } catch (InvalidAlgorithmParameterException ex) {
-                throw new RuntimeException(ex);
-            } catch (NoSuchPaddingException ex) {
-                throw new RuntimeException(ex);
-            } catch (IllegalBlockSizeException ex) {
-                throw new RuntimeException(ex);
-            } catch (NoSuchAlgorithmException ex) {
-                throw new RuntimeException(ex);
-            } catch (BadPaddingException ex) {
-                throw new RuntimeException(ex);
-            } catch (InvalidKeyException ex) {
-                throw new RuntimeException(ex);
+                String callData = "c" + domain.length() + " " + username.length() + " " +password.length() + " " + domain + username + password;
+                String response = client.sendMessage(callData);
+                System.out.println("create response: "+response);
+
             } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            } catch (InvalidKeySpecException ex) {
                 throw new RuntimeException(ex);
             }
 
@@ -118,25 +94,25 @@ public class GUI {
         }
         @Override
         public void actionPerformed(ActionEvent e) {
+            String domain = this.getText();
             try {
-                manager.readEntry(getText());
-            } catch (InvalidAlgorithmParameterException ex) {
-                throw new RuntimeException(ex);
-            } catch (NoSuchPaddingException ex) {
-                throw new RuntimeException(ex);
-            } catch (IllegalBlockSizeException ex) {
-                throw new RuntimeException(ex);
-            } catch (NoSuchAlgorithmException ex) {
-                throw new RuntimeException(ex);
-            } catch (BadPaddingException ex) {
-                throw new RuntimeException(ex);
-            } catch (InvalidKeyException ex) {
-                throw new RuntimeException(ex);
-            } catch (FileNotFoundException ex) {
-                throw new RuntimeException(ex);
+                String callData = "v"+domain;
+                String response = client.sendMessage(callData);
+                System.out.println("search response: "+response);
+                String[] responseData = response.split(" ");
+
+                int usernameLength = Integer.parseInt(responseData[0]);
+                int passwordLength = Integer.parseInt(responseData[1]); //I can take this out
+
+                int headingCharacters = responseData[0].length()+responseData[1].length()+2;
+                String info = response.substring(headingCharacters);
+
+                String username = info.substring(0,usernameLength);
+                String password = info.substring(usernameLength);
+
+                System.out.println("username: "+username+"     password: "+password);
+
             } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            } catch (InvalidKeySpecException ex) {
                 throw new RuntimeException(ex);
             }
         }
@@ -153,29 +129,22 @@ public class GUI {
         public void actionPerformed(ActionEvent e) {
             System.out.println("pressed");
             String password = this.getText();
-            String secret = MyKeyGenerator.generateSecretKey();
-            byte[] salt = MyKeyGenerator.generateSalt();
 
             try {
-                manager = new Manager(password,secret,salt);
-                authenticatedPage();
+                client = new PasswordClient();
+                client.startConnection(ip, port);
+                String registerCall = "r"+password;
+                String response = client.sendMessage(registerCall);
 
-
-            } catch (NoSuchAlgorithmException ex) {
-                throw new RuntimeException(ex);
-            } catch (InvalidKeySpecException ex) {
-                throw new RuntimeException(ex);
-            } catch (InvalidAlgorithmParameterException ex) {
-                throw new RuntimeException(ex);
-            } catch (NoSuchPaddingException ex) {
-                throw new RuntimeException(ex);
-            } catch (IllegalBlockSizeException ex) {
-                throw new RuntimeException(ex);
-            } catch (BadPaddingException ex) {
-                throw new RuntimeException(ex);
+                if (response.equals("authenticated")){
+                    System.out.println("yes");
+                    authenticatedPage();
+                }
+                else{
+                    System.out.println("no");
+                    System.out.println(response);
+                }
             } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            } catch (InvalidKeyException ex) {
                 throw new RuntimeException(ex);
             }
 
@@ -185,7 +154,7 @@ public class GUI {
     class SignInText extends JTextField implements ActionListener {
 
 
-        SignInText(){
+        SignInText() {
             super();
             this.addActionListener(this);
         }
@@ -195,31 +164,22 @@ public class GUI {
             System.out.println("pressed");
             String password = this.getText();
             try {
-                manager = new Manager(password);
-                authenticatedPage();
+                client = new PasswordClient();
+                client.startConnection(ip, port);
+                String loginCall = "l" + password;
+                String loginResponse = client.sendMessage(loginCall);
 
+                if (loginResponse.equals("authenticated")) {
+                    System.out.println("yes");
+                    authenticatedPage();
+                } else {
+                    System.out.println("no");
+                    System.out.println(loginResponse);
+                }
 
-            } catch (NoSuchAlgorithmException ex) {
-                throw new RuntimeException(ex);
-            } catch (InvalidKeySpecException ex) {
-                throw new RuntimeException(ex);
-            } catch (InvalidAlgorithmParameterException ex) {
-                throw new RuntimeException(ex);
-            } catch (FileNotFoundException ex) {
-                throw new RuntimeException(ex);
-            } catch (NoSuchPaddingException ex) {
-                throw new RuntimeException(ex);
-            } catch (IllegalBlockSizeException ex) {
-                throw new RuntimeException(ex);
-            } catch (BadPaddingException ex) {
-                throw new RuntimeException(ex);
-            } catch (InvalidKeyException ex) {
-                throw new RuntimeException(ex);
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
-
         }
     }
-
 }

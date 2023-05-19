@@ -1,32 +1,33 @@
-import javax.crypto.*;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.KeySpec;
-import java.util.Arrays;
 import java.util.Base64;
-import java.util.Scanner;
-import java.util.TreeMap;
 
 public class Manager {
-    private final MyKey masterKey;
-    private final String hashingKeyString;
+    private MyKey masterKey;
+    private String hashingKeyString;
     private final Base64.Encoder encoder = Base64.getEncoder();
     private final Base64.Decoder decoder = Base64.getDecoder();
-    private final byte[] domainHashingSalt;
+    private byte[] domainHashingSalt;
     private final String root = "data/";
 
 
     //register
-    Manager(String password,String secret, byte[] keySalt) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException, IOException, InvalidKeySpecException {
+    Manager(String password,boolean registering) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException, IOException, InvalidKeySpecException {
+        if (registering) register(password);
+        else login(password);
+    }
+
+    private void register(String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+        String secret = MyKeyGenerator.generateSecretKey();
+        byte[] keySalt = MyKeyGenerator.generateSalt();
 
         hashingKeyString = password+secret;
         masterKey = new MyKey(MyKeyGenerator.generateMasterKey(hashingKeyString,keySalt));
@@ -58,13 +59,9 @@ public class Manager {
         String name = root+"/entries";
         File file = new File(name);
         file.mkdir();
-
-//        test();
     }
 
-    //login
-    Manager(String password) throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidAlgorithmParameterException, IOException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
-
+    private void login(String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
         String path = root+"control.vault";
         BufferedReader scanner = new BufferedReader(new FileReader(path));
 
@@ -100,12 +97,14 @@ public class Manager {
         System.out.println("secret: "+secret+"    salt: "+readableSalt+"    computedMAC: "+computedMac+"    domainSalt: "+readableDomainSalt);
     }
 
-    private void checkMAC(String discoveredMac,String computedMac){;
+    private boolean checkMAC(String discoveredMac,String computedMac){;
         if (discoveredMac.equals(computedMac)){
             System.out.println("correct mac");
+            return true;
         }
         else{
             System.out.println("wrong mac");
+            return false;
         }
     }
 
@@ -118,7 +117,7 @@ public class Manager {
     }
 
 
-    public void readEntry(String domain) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException, IOException, InvalidKeySpecException {
+    public String readEntry(String domain) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException, IOException, InvalidKeySpecException {
         String domainHash = encoder.encodeToString(MyKeyGenerator.generateHash(domain+hashingKeyString,domainHashingSalt));
         domainHash = filter(domainHash);
         String path = root+"/entries/"+domainHash;
@@ -131,15 +130,18 @@ public class Manager {
         String computedMAC = masterKey.computeEntryMAC(domain,username,password);
 
         System.out.println("domain: "+domain+"    username: "+username+"     password: "+password);
-        checkMAC(discoveredMAC,computedMAC);
+        if (discoveredMAC.equals(computedMAC)){
+            return username.length()+" "+password.length()+" "+username+password;
+        }
+        else{
+            return "ERROR: TAMPERED FILE";
+        }
     }
 
     private String filter(String in){
         return in.replace('/','h');
     }
     public void createNewEntry(String domain, String username, String password) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException, IOException, InvalidKeySpecException {
-
-
         IvParameterSpec iv = generateIV();
         String encryptedPassword = masterKey.encrypt(password,iv);
         String encryptedUsername = masterKey.encrypt(username,iv);
@@ -167,6 +169,9 @@ public class Manager {
 
         System.out.println("domain: "+domain+"    username: "+username+"     password: "+password);
         System.out.println("domain: "+domainHash+"    username: "+encryptedUsername+"    password: "+encryptedPassword);
+
+
+
     }
 
 
