@@ -1,21 +1,27 @@
 import java.io.*;
 import java.net.*;
 
-public class PasswordClient {
+public class PasswordClient extends ReaderWriter {
     private Socket clientSocket;
-    private PrintWriter out;
-    private BufferedReader in;
+    private BufferedOutputStream out;
+    private BufferedInputStream in;
 
     public void startConnection(String ip, int port) throws IOException {
         clientSocket = new Socket(ip, port);
-        out = new PrintWriter(clientSocket.getOutputStream(), true);
-        in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        out = new BufferedOutputStream(clientSocket.getOutputStream());
+        in = new BufferedInputStream(clientSocket.getInputStream());
     }
 
+    public byte[][] sendData(byte[][] data,byte protocol) throws IOException {
+        out.write(protocol);
+        writeData(out,data);
+        return null;
+    }
     public String sendMessage(String msg) throws IOException {
-        out.println(msg);
-        String resp = in.readLine();
-        return resp;
+//        out.println(msg);
+//        String resp = in.readLine();
+//        return resp;
+        return null;
     }
 
     public void stopConnection() throws IOException {

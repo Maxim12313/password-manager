@@ -6,12 +6,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
-import java.util.Arrays;
 
 public class MyKeyGenerator {
 
 
-    public static String generateSecretKey(){
+    public static String generateRandomCharacterSequence(){
         String upper = "QWERTYUIOPASDFGHJKLZXCVBNM";
         String lower = "qwertyuiopasdfghjklzxcvbnm";
         String numbers = "1234567890";
@@ -37,19 +36,11 @@ public class MyKeyGenerator {
         return bytes;
     }
 
-    //string->bytes (magic here) ->secret key->base64 hash->AES secret key
-    public static SecretKey generateMasterKey(String input, byte[] salt) throws NoSuchAlgorithmException, InvalidKeySpecException {
-        byte[] hash = generateHash(input,salt);
-        String cipher = "AES";
-        return new SecretKeySpec(hash,cipher);
-    }
-
     public static byte[] generateHash(String input, byte[] salt) throws NoSuchAlgorithmException, InvalidKeySpecException {
         int iterations = 100_000;
-        int keyLength = 256;
-
+        int keyLength = 512; //first half 256 encryption aes, second half 256 hmac
         KeySpec spec = new PBEKeySpec(input.toCharArray(), salt, iterations, keyLength);
-        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA512");
         return factory.generateSecret(spec).getEncoded();
     }
 }
