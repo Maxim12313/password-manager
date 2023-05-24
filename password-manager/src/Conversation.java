@@ -8,6 +8,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 
 public interface Conversation{
-    byte[] read(BufferedInputStream reader,Manager manager) throws IOException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeySpecException, InvalidKeyException;
-    byte[] write(BufferedOutputStream writer, Manager manager);
+
+    void serverReadWrite() throws IOException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeySpecException, InvalidKeyException;
+
+    byte[][] clientWriteRead(byte[][] data) throws IOException;
+
+    //define message, how to read, get request type, funcion from manager to response, response to bytes
 }

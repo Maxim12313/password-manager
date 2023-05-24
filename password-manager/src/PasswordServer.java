@@ -10,14 +10,13 @@ import java.security.spec.InvalidKeySpecException;
 
 public class PasswordServer {
     private ServerSocket serverSocket;
-    private Manager manager = null;
+    private Manager manager;
 
-    public PasswordServer(Manager manager, int port) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, IOException, InvalidKeySpecException, InvalidKeyException {
+    public PasswordServer(Manager manager) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, InvalidKeyException {
         this.manager = manager;
-        start(port);
     }
 
-    private void start(int port) throws IOException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, InvalidKeyException {
+    public void start(int port) throws IOException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, InvalidKeyException {
         serverSocket = new ServerSocket(port);
         while (true){
             new PasswordServerHandler(serverSocket.accept()).start();
@@ -45,44 +44,37 @@ public class PasswordServer {
                 out = new BufferedOutputStream(clientSocket.getOutputStream());
                 in = new BufferedInputStream(clientSocket.getInputStream());
 
-                while (in.available()!=-1) { //what should signal different calls also available is innacurate
-                    byte type = (byte)in.read();
-                    byte r = (byte)'r';
-                    byte c = (byte)'c';
-                    byte s = (byte)'s';
-                    if (type !=r & type!=c && type!=s){
-                        out.write("ERROR: NO RECOGNIZED TYPE".getBytes());
+                while (true) { //what should signal different calls also available is innacurate
+                    int read = in.read();
+                    if (read==-1){
                         continue;
                     }
-                    if (type==r){
-                        byte[][] data = ReadWrite.readData(in,1);
-                        byte[][] send = manager.readEntryByDomain(data[0]);
-                        out.write(r);
-                        ReadWrite.writeData(out,send);
+                    char protocol = (char)read;
+
+                    if (protocol=='c'){
+                        CreateEntryHandler handler = new CreateEntryHandler(in,out,manager);
+                        handler.serverReadWrite();
                     }
-                    if (type==c){
-                        byte[][] data = ReadWrite.readData(in,3);
-                        manager.createNewEntry(data[0],data[1],data[2]);
+                    else if (protocol=='r'){
+                        ReadEntryHandler handler = new ReadEntryHandler(in,out,manager);
+                        handler.serverReadWrite();
+                    }
+                    else if (protocol=='s'){
+                        out.write("CONNECTION CLOSED".getBytes());
+                        break;
+                    }
+                    else{
+                        System.out.println("UNRECOGNIZED");
                     }
                 }
+                System.out.println("closed");
                 in.close();
                 out.close();
                 clientSocket.close();
 
-            } catch (IOException | InvalidAlgorithmParameterException | NoSuchPaddingException |
-                     IllegalBlockSizeException | NoSuchAlgorithmException | BadPaddingException | InvalidKeyException |
-                     InvalidKeySpecException e) {
-                throw new RuntimeException(e);
+            } catch (IOException IllegalBlockSizeException){
+                System.out.println("ILLEGAL BLOCK SIZE EXCEPTION");
             }
         }
     }
-
-
-
-//    public static void main(String[] args) throws IOException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, InvalidKeyException {
-//        int port = 50501;
-//        PasswordServer server=new PasswordServer();
-//        server.start(port);
-//    }
-
 }

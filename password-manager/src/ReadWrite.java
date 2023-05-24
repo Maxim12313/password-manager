@@ -8,43 +8,34 @@ public class ReadWrite {
 
     public static void writeData(BufferedOutputStream writer, byte[][] data) throws IOException {
 
-        System.out.println("write: ");
-//        int totalLength = 0;
-//        for (byte[] piece:data){
-//            byte length  = (byte)piece.length;
-//            totalLength+=length;
-//        }
-//
-//        writer.write(totalLength);
-//        System.out.println("totalLength: "+totalLength);
-
+//        System.out.println("write: ");
         for (byte[] piece:data){
             byte length  = (byte)piece.length;
             writer.write(length);
-            System.out.println("length: "+length);
+//            System.out.println("length: "+length);
         }
 
         for (byte[] piece:data){
             writer.write(piece);
-            System.out.println("data: "+Arrays.toString(piece));
+//            System.out.println("data: "+Arrays.toString(piece));
         }
 
     }
 
-    public static byte[][] readData(BufferedInputStream reader, int headerLength) throws IOException {
-        System.out.println("read: ");
+    public static byte[][] readData(BufferedInputStream reader, int headerLength, int expectedLength) throws IOException {
+//        System.out.println("read: ");
 
         byte[] headerData = new byte[headerLength];
 
+        int calculatedLength = headerLength;
         for (int i=0;i<headerLength;i++){
             headerData[i] = (byte)reader.read();
-            System.out.print(i+": "+headerData[i]+"    ");
+            calculatedLength+=headerData[i];
+//            System.out.println(i+": "+headerData[i]+"    ");
         }
-
-//        if (calculatedLength!=discoveredLength){
-//            System.out.println("calLength: "+calculatedLength+"    discLength: "+discoveredLength);
-//            throw new RuntimeException("ERROR: UNEXPECTED FILE LENGTH");
-//        }
+        if (expectedLength!=-1 && calculatedLength!=expectedLength){
+            throw new RuntimeException("ERROR: UNEXPECTED FILE LENGTH");
+        }
 
         byte[][] data = new byte[headerLength][];
         for (int i=0;i<headerLength;i++){
@@ -52,7 +43,7 @@ public class ReadWrite {
             byte[] piece = new byte[length];
             reader.read(piece,0,length);
             data[i] = piece;
-            System.out.print(i+": "+ Arrays.toString(data[i])+"    ");
+//            System.out.println(i+": "+ Arrays.toString(data[i])+"    ");
         }
         return data;
     }

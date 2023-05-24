@@ -54,7 +54,6 @@ public class GUI {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            System.out.println("pressed");
             byte[] domain = ((EntryText)myPanel.getComponent(1)).getText().getBytes();
             byte[] username = ((EntryText)myPanel.getComponent(3)).getText().getBytes();
             byte[] password = ((EntryText)myPanel.getComponent(5)).getText().getBytes();
@@ -64,15 +63,13 @@ public class GUI {
                 return;
             }
 
-//            try {
-//
-//
-//                String response = client.sendMessage(callData);
-//                System.out.println("create response: "+response);
-//
-//            } catch (IOException ex) {
-//                System.out.println("ERROR TOPLAYER");
-//            }
+            try {
+                CreateEntryHandler handler = new CreateEntryHandler(client.in,client.out,null);
+                byte[][] response = handler.clientWriteRead(new byte[][]{domain,username,password});
+
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
 
 
         }
@@ -86,20 +83,10 @@ public class GUI {
         }
         @Override
         public void actionPerformed(ActionEvent e) {
-            String domain = this.getText();
+            byte[] domain = this.getText().getBytes();
             try {
-                String callData = "v"+domain;
-                String response = client.sendMessage(callData);
-                char status = response.charAt(0);
-                String data = response.substring(1);
-
-                if (status!='g'){
-                    System.out.println(data);
-                    return;
-                }
-
-
-
+                ReadEntryHandler handler = new ReadEntryHandler(client.in,client.out,null);
+                byte[][] response = handler.clientWriteRead(new byte[][]{domain});
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }

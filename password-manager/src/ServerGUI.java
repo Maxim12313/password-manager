@@ -90,39 +90,31 @@ public class ServerGUI {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            System.out.println("pressed");
             String password = this.getText();
-//            try {
-//                authenticatedPage();
-//            } catch (IOException ex) {
-//                throw new RuntimeException(ex);
-//            }
-
-            String path = "data/control.vault";
-            if (!registering && !new File(path).exists()){
-                System.out.println("ERROR: NOT REGISTERED OR INCORRECT PASSWORD");
-                return;
-            }
-
             try {
                 startServer(password,registering);
             } catch (IOException | InvalidAlgorithmParameterException | NoSuchPaddingException |
-                     IllegalBlockSizeException | NoSuchAlgorithmException | BadPaddingException | InvalidKeyException |
+                     IllegalBlockSizeException | NoSuchAlgorithmException | BadPaddingException | InvalidKeyException | RuntimeException|
                      InvalidKeySpecException ex) {
-                System.out.println("ERROR: INCORRECT PASSWORD");
+                System.out.println(ex.getMessage());
             }
         }
     }
 
-    public void startServer(String password,boolean registering) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, IOException, InvalidKeySpecException, InvalidKeyException {
-        Manager manager = new Manager(password,registering);
-        if (manager.errorMessage.length()!=0) {
-            System.out.println(manager.errorMessage);
-            manager.errorMessage = "";
+    public void startServer(String password,boolean registering) throws IOException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, InvalidKeyException {
+        Manager manager = null;
+        try {
+            manager = new Manager(password,registering);
+        } catch (InvalidAlgorithmParameterException | NoSuchPaddingException | IllegalBlockSizeException |
+                 NoSuchAlgorithmException | BadPaddingException | InvalidKeyException | IOException |
+                 InvalidKeySpecException e) {
+            System.out.println(e.getMessage());
             return;
         }
+        System.out.println("SERVER RUNNING");
         authenticatedPage();
-        PasswordServer server=new PasswordServer(manager,port);
+        PasswordServer server=new PasswordServer(manager);
+        server.start(port);
     }
 
 

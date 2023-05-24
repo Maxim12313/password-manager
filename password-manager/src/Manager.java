@@ -12,11 +12,10 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
 
-public class Manager {
+public class Manager{
     private EncryptionKey encryptionKey;
     private HMACKey hmacKey;
     private final String root = "data/";
-    private HashSet<String> entryDomains;
     public String errorMessage = "";
 
 
@@ -55,15 +54,18 @@ public class Manager {
         String name = root+"/entries";
         File file = new File(name);
         file.mkdir();
-
-        entryDomains = new HashSet<>();
     }
 
-    private void login(String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+    private void login(String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
         String path = root+"control.vault";
 
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(path));
-        byte[][] data = ReadWrite.readData(in,5);
+        File file = new File(path);
+        if (!file.exists()){
+            throw new RuntimeException("ERROR: NOT REGISTERED");
+        }
+
+        byte[][] data = ReadWrite.readData(in,5,(int)file.length());
         in.close();
 
         String secret = new String(data[0]);
@@ -76,23 +78,19 @@ public class Manager {
         encryptionKey = new EncryptionKey(partial(keyData,0,32));
         hmacKey = new HMACKey(partial(keyData,32,32));
 
-        data[4] = new byte[]{};
         byte[] MACData = combine(new byte[][]{"control".getBytes(),secret.getBytes(),keySalt,IV.getIV(),test});
         byte[] computeMAC = hmacKey.computeMAC(MACData);
 
         if (!Arrays.equals(discoveredMAC,computeMAC)){
-            throw new RuntimeException("ERROR: INCCORECT MAC");
+            throw new RuntimeException("ERROR: INCORRECT MAC");
         }
 
-        byte[] decryptedTest = encryptionKey.decrypt(test,IV);
-        entryDomains = getEntryDomains();
-    }
-
-    public static int getBase64ByteLength(int byteLength){
-        int bytesToBits = 8;
-        int base64ToBits = 6;
-        int withoutPadding = (int)Math.ceil((double)byteLength*bytesToBits/base64ToBits);
-        return (int)(4*Math.ceil(withoutPadding/(double)4)); //add padding by rounding up to nearest multiple of 4
+        try {
+            byte[] decryptedTest = encryptionKey.decrypt(test,IV);
+        } catch (NoSuchPaddingException | InvalidAlgorithmParameterException | IllegalBlockSizeException |
+                 BadPaddingException e) {
+            throw new RuntimeException("ERROR: INCORRECT PASSWORD");
+        }
     }
 
     public static byte[] partial(byte[] source,int start,int length){
@@ -109,23 +107,11 @@ public class Manager {
         return new IvParameterSpec(bytes);
     }
 
-    private HashSet<String> getEntryDomains(){
-        String path = root+"/entries";
-        File directory = new File(path);
-
-        HashSet<String> entryDomains = new HashSet<>();
-        for (File file:directory.listFiles()){
-            entryDomains.add(file.getName());
-        }
-        return entryDomains;
-    }
-
     public void createNewEntry(byte[] domain, byte[] username, byte[] password) throws NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException {
         IvParameterSpec IV = generateIV();
 
         byte[] domainHash = hmacKey.computeMAC(domain);
-        String fileName = filter(Base64.getEncoder().encodeToString(domainHash));
-        entryDomains.add(fileName);
+        String fileName = filter(Base64.getEncoder().encodeToString(domainHash))+".vault";
 
         byte[] encryptedDomain = encryptionKey.encrypt(domain,IV);
         byte[] encryptedUsername = encryptionKey.encrypt(username,IV);
@@ -134,9 +120,11 @@ public class Manager {
         byte[] HMACData = combine(new byte[][]{fileName.getBytes(),encryptedDomain,encryptedUsername,encryptedPassword,IV.getIV()});
         byte[] MAC = hmacKey.computeMAC(HMACData);
 
-        byte[][] writeData = new byte[][]{encryptedDomain,encryptedUsername,encryptedPassword,IV.getIV(),MAC};
+        byte[][] writeData = new byte[][]{encryptedDomain,encryptedUsername,encryptedPassword,IV.getIV(),MAC}; //mac includes .vault file name extension
 
         String path = root+"/entries/"+fileName;
+        File file = new File(path);
+        System.out.println(file.exists());
         BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(path));
         ReadWrite.writeData(out,writeData);
         out.close();
@@ -145,19 +133,20 @@ public class Manager {
 
     public byte[][] readEntryByDomain(byte[] domain) throws NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException, InvalidKeySpecException {
         byte[] domainHash = hmacKey.computeMAC(domain);
-        String fileName = filter(Base64.getEncoder().encodeToString(domainHash));
+        String fileName = filter(Base64.getEncoder().encodeToString(domainHash))+".vault";
         return readEntryByFileName(fileName);
     }
     public byte[][] readEntryByFileName(String fileName) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException, IOException, InvalidKeySpecException {
 
-        if (!entryDomains.contains(fileName)) {
-            System.out.println("unrecognized domain");
-        }
-
         String path = root+"/entries/"+fileName;
         File file = new File(path);
+        if (!file.exists()){
+            System.out.println("no exist");
+            throw new RuntimeException("ERROR: UNRECOGNIZED DOMAIN");
+        }
+
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(path));
-        byte[][] data = ReadWrite.readData(in,5);
+        byte[][] data = ReadWrite.readData(in,5,(int)file.length());
         in.close();
 
         byte[] encryptedDomain = data[0];
@@ -184,27 +173,6 @@ public class Manager {
         return in.replace('/','h');
     }
 
-
-    //padding = #, it is outside base64 range of characters
-    public static byte[] addPadding(byte[] data,int length){
-        byte[] paddedData = new byte[length];
-        Arrays.fill(paddedData, (byte) '#');
-        System.arraycopy(data,0,paddedData,0,data.length);
-        System.out.println("paddedData: "+Arrays.toString(paddedData));
-        return paddedData;
-    }
-
-    public static byte[] removePadding(byte[] data){
-        byte padding = (byte)'#';
-
-        int i = 0;
-        while (i<data.length && data[i]!=padding){
-            i++;
-        }
-
-        return partial(data,0,i);
-
-    }
     public static byte[] combine(byte[][] inputs){
         int length = 0;
         for (byte[] input:inputs){
