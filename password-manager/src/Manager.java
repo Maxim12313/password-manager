@@ -8,15 +8,13 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.HashSet;
+import java.util.*;
 
 public class Manager{
     private EncryptionKey encryptionKey;
     private HMACKey hmacKey;
     private final String root = "data/";
-    public String errorMessage = "";
+    public LinkedList<String> registeredDomains = new LinkedList<>();
 
 
     //register
@@ -56,7 +54,7 @@ public class Manager{
         file.mkdir();
     }
 
-    private void login(String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException {
+    private void login(String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
         String path = root+"control.vault";
 
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(path));
@@ -91,6 +89,7 @@ public class Manager{
                  BadPaddingException e) {
             throw new RuntimeException("ERROR: INCORRECT PASSWORD");
         }
+        compileDomainSet();
     }
 
     public static byte[] partial(byte[] source,int start,int length){
@@ -128,7 +127,18 @@ public class Manager{
         BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(path));
         ReadWrite.writeData(out,writeData);
         out.close();
+        registeredDomains.add(new String(domain));
 
+    }
+
+    public void compileDomainSet() throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, IOException, InvalidKeySpecException, InvalidKeyException {
+        File folder = new File(root+"/entries");
+        File[] files = folder.listFiles();
+        for (File file:files){
+            byte[][] data = readEntryByFileName(file.getName());
+            String domain = new String(data[0]);
+            registeredDomains.add(domain);
+        }
     }
 
     public byte[][] readEntryByDomain(byte[] domain) throws NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, IOException, InvalidKeySpecException {
@@ -141,7 +151,6 @@ public class Manager{
         String path = root+"/entries/"+fileName;
         File file = new File(path);
         if (!file.exists()){
-            System.out.println("no exist");
             throw new RuntimeException("ERROR: UNRECOGNIZED DOMAIN");
         }
 

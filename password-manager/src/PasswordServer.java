@@ -23,10 +23,6 @@ public class PasswordServer {
         }
     }
 
-    //'v' = view
-    //'c' = create
-    //'.' = end
-    //'a' = authentication check
     private class PasswordServerHandler extends Thread{
         private Socket clientSocket;
         private BufferedOutputStream out;
@@ -50,6 +46,7 @@ public class PasswordServer {
                         continue;
                     }
                     char protocol = (char)read;
+                    System.out.println("protocol: "+protocol);
 
                     if (protocol=='c'){
                         CreateEntryHandler handler = new CreateEntryHandler(in,out,manager);
@@ -57,6 +54,10 @@ public class PasswordServer {
                     }
                     else if (protocol=='r'){
                         ReadEntryHandler handler = new ReadEntryHandler(in,out,manager);
+                        handler.serverReadWrite();
+                    }
+                    else if (protocol=='l'){
+                        DomainListHandler handler = new DomainListHandler(in,out,manager);
                         handler.serverReadWrite();
                     }
                     else if (protocol=='s'){
@@ -74,6 +75,20 @@ public class PasswordServer {
 
             } catch (IOException IllegalBlockSizeException){
                 System.out.println("ILLEGAL BLOCK SIZE EXCEPTION");
+            } catch (InvalidAlgorithmParameterException e) {
+                throw new RuntimeException(e);
+            } catch (NoSuchPaddingException e) {
+                throw new RuntimeException(e);
+            } catch (IllegalBlockSizeException e) {
+                throw new RuntimeException(e);
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException(e);
+            } catch (BadPaddingException e) {
+                throw new RuntimeException(e);
+            } catch (InvalidKeySpecException e) {
+                throw new RuntimeException(e);
+            } catch (InvalidKeyException e) {
+                throw new RuntimeException(e);
             }
         }
     }

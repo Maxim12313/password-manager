@@ -47,11 +47,4 @@ public class ReadWrite {
         }
         return data;
     }
-
-
-    private static byte[] intToBytes(int num) {
-        ByteBuffer buffer = ByteBuffer.allocate(4);
-        buffer.putInt(num);
-        return buffer.array();
-    }
 }

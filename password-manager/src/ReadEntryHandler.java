@@ -35,7 +35,7 @@ public class ReadEntryHandler extends Communicator implements Conversation{
     }
 
     @Override
-    public byte[][] clientWriteRead(byte[][] data) throws IOException {
+    public Response clientWriteRead(byte[][] data) throws IOException {
         out.write((byte)'r');
         writeData(data);
         out.flush();
@@ -46,16 +46,15 @@ public class ReadEntryHandler extends Communicator implements Conversation{
         if ((byte)status=='b'){
             headerLength = 1;
             response = readData(headerLength);
-            System.out.println(new String(response[0]));
+            return new Response(new String(response[0]));
         }
-        else{
+        else {
             response = readData(headerLength);
-            byte[] domainFound = response[0];
-            byte[] username = response[1];
-            byte[] password = response[2];
-            System.out.println("domain: "+new String(domainFound)+"    username: "+new String(username)+"    password: "+new String(password));
-
+            String[] vals = new String[headerLength];
+            for (int i=0;i<headerLength;i++){
+                vals[i] = new String(response[i]);
+            }
+            return new Response(vals);
         }
-        return response;
     }
 }

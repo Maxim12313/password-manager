@@ -38,14 +38,19 @@ public class CreateEntryHandler extends Communicator implements Conversation {
     }
 
     @Override
-    public byte[][] clientWriteRead(byte[][] data) throws IOException {
+    public Response clientWriteRead(byte[][] data) throws IOException {
         out.write((byte)'c');
         writeData(data);
         out.flush();
 
         int status = in.read();
-        byte[][] response = readData(1); //always 1 header no matter what (1 for error message, 1 more success message)
-        System.out.println(new String(response[0]));
-        return response;
+        int headerLength = 1;
+        byte[][] response = readData(headerLength); //always 1 header no matter what (1 for error message, 1 more success message)
+        if ((byte)status=='b'){
+            return new Response(new String(response[0]));
+        }
+        else{
+            return new Response(new String[]{new String(response[0])});
+        }
     }
 }

@@ -11,7 +11,7 @@ public interface Conversation{
 
     void serverReadWrite() throws IOException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeySpecException, InvalidKeyException;
 
-    byte[][] clientWriteRead(byte[][] data) throws IOException;
+    Response clientWriteRead(byte[][] data) throws IOException;
 
     //define message, how to read, get request type, funcion from manager to response, response to bytes
 }
