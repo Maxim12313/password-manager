@@ -1,7 +1,6 @@
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 
 public abstract class Communicator {
 
@@ -13,6 +12,12 @@ public abstract class Communicator {
         this.out = out;
         this.manager = manager;
     }
+
+    Communicator(BufferedInputStream in, BufferedOutputStream out){
+        this.in = in;
+        this.out = out;
+        this.manager = null;
+    }
     public byte[][] readData(int headerLength) throws IOException {
         return ReadWrite.readData(in,headerLength,-1);
     }
@@ -20,12 +25,4 @@ public abstract class Communicator {
     public void writeData(byte[][] data) throws IOException {
         ReadWrite.writeData(out,data);
     }
-
-    public void printData(byte[][] data){
-        for (byte[] piece:data){
-            System.out.println(new String(piece));
-        }
-    }
-
-
 }

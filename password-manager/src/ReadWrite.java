@@ -31,8 +31,9 @@ public class ReadWrite {
         for (int i=0;i<headerLength;i++){
             headerData[i] = (byte)reader.read();
             calculatedLength+=headerData[i];
-//            System.out.println(i+": "+headerData[i]+"    ");
+            System.out.println(i+": "+headerData[i]+"    ");
         }
+        System.out.println("expected: "+expectedLength+"    calculated: "+calculatedLength);
         if (expectedLength!=-1 && calculatedLength!=expectedLength){
             throw new RuntimeException("ERROR: UNEXPECTED FILE LENGTH");
         }

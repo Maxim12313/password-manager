@@ -112,9 +112,20 @@ public class Manager{
         byte[] domainHash = hmacKey.computeMAC(domain);
         String fileName = filter(Base64.getEncoder().encodeToString(domainHash))+".vault";
 
+        int length = 256-32;
+        byte[] paddedPassword = new byte[length];
+
+        System.arraycopy(password,0,paddedPassword,0,password.length);
+        System.out.println("padded: "+Arrays.toString(paddedPassword));
+        System.out.println("non: "+Arrays.toString(password));
+
         byte[] encryptedDomain = encryptionKey.encrypt(domain,IV);
         byte[] encryptedUsername = encryptionKey.encrypt(username,IV);
-        byte[] encryptedPassword = encryptionKey.encrypt(password,IV);
+        byte[] encryptedPassword = encryptionKey.encrypt(paddedPassword,IV);
+//        byte[] encryptedPassword = encryptionKey.encrypt(password,IV);
+
+        System.out.println("encrypted: "+Arrays.toString(encryptedPassword));
+        System.out.println("length: "+encryptedPassword.length);
 
         byte[] HMACData = combine(new byte[][]{fileName.getBytes(),encryptedDomain,encryptedUsername,encryptedPassword,IV.getIV()});
         byte[] MAC = hmacKey.computeMAC(HMACData);
@@ -128,8 +139,8 @@ public class Manager{
         ReadWrite.writeData(out,writeData);
         out.close();
         registeredDomains.add(new String(domain));
-
     }
+
 
     public void compileDomainSet() throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, IOException, InvalidKeySpecException, InvalidKeyException {
         File folder = new File(root+"/entries");
@@ -158,11 +169,13 @@ public class Manager{
         byte[][] data = ReadWrite.readData(in,5,(int)file.length());
         in.close();
 
+        System.out.println("REACHED");
         byte[] encryptedDomain = data[0];
         byte[] encryptedUsername = data[1];
         byte[] encryptedPassword = data[2];
         IvParameterSpec IV = new IvParameterSpec(data[3]);
         byte[] discoveredMAC = data[4];
+
 
         byte[] HMACData = combine(new byte[][]{fileName.getBytes(),encryptedDomain,encryptedUsername,encryptedPassword,IV.getIV()});
         byte[] computedMAC = hmacKey.computeMAC(HMACData);
@@ -173,7 +186,23 @@ public class Manager{
 
         byte[] domain = encryptionKey.decrypt(encryptedDomain,IV);
         byte[] username = encryptionKey.decrypt(encryptedUsername,IV);
-        byte[] password = encryptionKey.decrypt(encryptedPassword,IV);
+//        byte[] password = encryptionKey.decrypt(encryptedPassword,IV);
+        byte[] paddedPassword = encryptionKey.decrypt(encryptedPassword,IV);
+
+        System.out.println("REACHED");
+        System.out.println(Arrays.toString(paddedPassword));
+
+        int i=0;
+        while (paddedPassword[i]!=(byte)0){
+            i++;
+        }
+
+        System.out.println(i);
+        byte[] password = new byte[i];
+        System.arraycopy(paddedPassword,0,password,0,i);
+
+        System.out.println("padded: "+Arrays.toString(paddedPassword));
+        System.out.println("non: "+Arrays.toString(password));
 
         return new byte[][]{domain,username,password};
     }
