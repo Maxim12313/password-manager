@@ -25,22 +25,26 @@ public class ReadWrite {
     public static byte[][] readData(BufferedInputStream reader, int headerLength, int expectedLength) throws IOException {
 //        System.out.println("read: ");
 
-        byte[] headerData = new byte[headerLength];
+        int[] headerData = new int[headerLength];
 
         int calculatedLength = headerLength;
         for (int i=0;i<headerLength;i++){
-            headerData[i] = (byte)reader.read();
+            int thing = reader.read();
+//            System.out.println(thing);
+            headerData[i] = thing;
             calculatedLength+=headerData[i];
-            System.out.println(i+": "+headerData[i]+"    ");
+//            System.out.println(i+": "+headerData[i]+"    ");
         }
-        System.out.println("expected: "+expectedLength+"    calculated: "+calculatedLength);
+
+
+//        System.out.println("expected: "+expectedLength+"    calculated: "+calculatedLength);
         if (expectedLength!=-1 && calculatedLength!=expectedLength){
             throw new RuntimeException("ERROR: UNEXPECTED FILE LENGTH");
         }
 
         byte[][] data = new byte[headerLength][];
         for (int i=0;i<headerLength;i++){
-            byte length = headerData[i];
+            int length = headerData[i];
             byte[] piece = new byte[length];
             reader.read(piece,0,length);
             data[i] = piece;
