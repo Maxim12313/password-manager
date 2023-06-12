@@ -1,6 +1,8 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -55,7 +57,7 @@ public class GUI {
         infoFrame.add(infoPanel);
         infoFrame.revalidate();
 
-        infoFrame.setSize(500, 500);
+        infoFrame.setSize(500, 300);
         infoFrame.setVisible(true);
     }
 
@@ -96,9 +98,13 @@ public class GUI {
 
             JPanel info = new JPanel();
             info.setLayout(new BoxLayout(info,BoxLayout.Y_AXIS));
-            JLabel domainLabel = new JLabel("Domain: "+data[0]);
-            JLabel usernameLabel = new JLabel("Userame: "+data[1]);
-            JLabel passwordLabel = new JLabel("Password: "+data[2]);
+
+
+
+
+            EntryLabel domainLabel = new EntryLabel("Domain: "+data[0]);
+            EntryLabel usernameLabel = new EntryLabel("Username: "+data[1]);
+            EntryLabel passwordLabel = new EntryLabel("Password: "+data[2]);
 
             info.add(domainLabel);
             info.add(usernameLabel);
@@ -164,12 +170,49 @@ public class GUI {
         myPanel.revalidate();
     }
 
+    class EntryLabel extends JLabel implements MouseListener{
+
+        EntryLabel(String text){
+            super(text);
+            this.addMouseListener(this);
+        }
+
+        @Override
+        public void mouseClicked(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            String text = this.getText();
+            int headerLength = text.split(" ")[0].length()+1;
+            String value = text.substring(headerLength);
+            Clipboard clip = Toolkit.getDefaultToolkit().getSystemClipboard();
+            StringSelection strse1 = new StringSelection(value);
+            clip.setContents(strse1, strse1);
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mouseEntered(MouseEvent e) {
+
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+
+        }
+    }
 
     class DomainList extends JList implements MouseListener {
 
         DomainList(DefaultListModel model){
             super(model);
-            this.setPreferredSize(new Dimension(100,200));
+            this.setPreferredSize(new Dimension(50,100));
             this.addMouseListener(this);
         }
 
