@@ -12,13 +12,6 @@ public class EncryptionKey {
         key = new SecretKeySpec(keyData,cipher);
     }
 
-
-    //interface:
-    //read domain
-
-
-    //
-
     public byte[] encrypt(byte[] input, IvParameterSpec iv) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         String algorithm = "AES/CBC/PKCS5Padding";
         Cipher cipher = Cipher.getInstance(algorithm);

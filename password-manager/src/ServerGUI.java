@@ -3,6 +3,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
@@ -23,30 +24,59 @@ public class ServerGUI {
 
     JFrame myJFrame = new JFrame("Password Manager Server");
     JPanel myPanel = new JPanel();
+    JLabel error = new JLabel();
     int port = 50501;
     String ip = "127.0.0.1";
 
-    ServerGUI() throws IOException {
+    ServerGUI() {
         myPanel.setLayout(new BoxLayout(myPanel,BoxLayout.Y_AXIS));
-        startPage();
+        loginPage();
         myJFrame.add(myPanel);
 
-        myJFrame.setSize(300, 200);
+        myJFrame.setSize(300, 220);
         myJFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         myJFrame.setLocationRelativeTo(null);
         myJFrame.setVisible(true);
     }
 
-    public void startPage(){
+    public void registerPage(){
         myPanel.removeAll();
 
-        myPanel.add(new JLabel("Register"));
+        JLabel title = new JLabel("Register Page");
+        title.setFont(new Font("Serif", Font.PLAIN, 50));
+        myPanel.add(title);
+        myPanel.add(new JLabel("Username"));
         myPanel.add(new AuthenticationText(true));
 
-        myPanel.add(new JLabel("Login"));
-        myPanel.add(new AuthenticationText(false));
+        myPanel.add(new JLabel("Password"));
+        myPanel.add(new AuthenticationText(true));
+        error.setText("");
+        myPanel.add(error);
+        myPanel.add(new NextPage(false,"Switch to Login Page"));
         myPanel.revalidate();
+    }
+    public void loginPage(){
+        myPanel.removeAll();
 
+        JLabel title = new JLabel("Login Page");
+        title.setFont(new Font("Serif", Font.PLAIN, 50));
+        myPanel.add(title);
+
+        myPanel.add(new JLabel("Username"));
+        myPanel.add(new AuthenticationText(false));
+
+        myPanel.add(new JLabel("Password"));
+        myPanel.add(new AuthenticationText(false));
+        error.setText("");
+        myPanel.add(error);
+        myPanel.add(new NextPage(true,"Switch to Register Page"));
+
+        myPanel.revalidate();
+    }
+
+    public void updateError(String errorMessage){
+        error.setText(errorMessage);
+        myPanel.revalidate();
     }
 
     public void authenticatedPage() throws IOException {
@@ -78,6 +108,20 @@ public class ServerGUI {
     }
 
 
+    class NextPage extends JButton implements ActionListener{
+
+        boolean changeToRegister;
+        NextPage(boolean changeToRegister,String name){
+            super(name);
+            this.addActionListener(this);
+            this.changeToRegister = changeToRegister;
+        }
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if (changeToRegister)registerPage();
+            else loginPage();
+        }
+    }
     class AuthenticationText extends JTextField implements ActionListener {
 
         boolean registering;
@@ -90,21 +134,29 @@ public class ServerGUI {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            String password = this.getText();
+            String username = ((JTextField)myPanel.getComponent(2)).getText();
+            String password = ((JTextField)myPanel.getComponent(4)).getText();
+
+            if (password.length()==0 || username.length()==0){
+                System.out.println("ERROR: MISSING FIELDS");
+                updateError("ERROR: MISSING FIELDS");
+                return;
+            }
             try {
-                startServer(password,registering);
+                startServer(username,password,registering);
             } catch (IOException | InvalidAlgorithmParameterException | NoSuchPaddingException |
                      IllegalBlockSizeException | NoSuchAlgorithmException | BadPaddingException | InvalidKeyException | RuntimeException|
                      InvalidKeySpecException ex) {
                 System.out.println(ex.getMessage());
+                updateError(ex.getMessage());
             }
         }
     }
 
-    public void startServer(String password,boolean registering) throws IOException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, InvalidKeyException {
+    public void startServer(String username,String password,boolean registering) throws IOException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, InvalidKeySpecException, BadPaddingException, InvalidKeyException {
         Manager manager = null;
         try {
-            manager = new Manager(password,registering);
+            manager = new Manager(username,password,registering);
         } catch (InvalidAlgorithmParameterException | NoSuchPaddingException | IllegalBlockSizeException |
                  NoSuchAlgorithmException | BadPaddingException | InvalidKeyException | IOException |
                  InvalidKeySpecException e) {
@@ -112,6 +164,7 @@ public class ServerGUI {
             return;
         }
         System.out.println("SERVER RUNNING");
+        updateError("SERVER RUNNING");
         authenticatedPage();
         PasswordServer server=new PasswordServer(manager);
         server.start(port);

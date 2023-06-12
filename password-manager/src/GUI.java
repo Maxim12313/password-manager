@@ -18,9 +18,9 @@ public class GUI {
     JFrame myJFrame = new JFrame("Entry");
     JFrame infoFrame = new JFrame("Info");
     JPanel infoPanel = new JPanel();
-    JPanel domainPanel = new JPanel();
     JPanel detailsPanel = new JPanel();
     JPanel myPanel = new JPanel();
+    JLabel error = new JLabel();
     TreeSet<String> registeredDomains = new TreeSet<>();
     PasswordClient client;
     int port = 50501;
@@ -28,7 +28,12 @@ public class GUI {
 
     GUI() throws IOException {
         client = new PasswordClient();
-        client.startConnection(ip, port);
+        try {
+            client.startConnection(ip, port);
+        } catch (IOException e) {
+            System.out.println("ERROR: PASSWORD SERVER NOT STARTED");
+            return;
+        }
         detailsPanel.setLayout(new BorderLayout(10,10));
         detailsPanel.setBackground(Color.WHITE);
         infoPanel.setLayout(new BorderLayout(10,10));
@@ -42,7 +47,7 @@ public class GUI {
 
 
         compileDomainSet();
-        updateEntryList();
+        setupEntryList();
         updateDetailsPage(null);
         entryWriterPage();
 
@@ -112,9 +117,13 @@ public class GUI {
     }
 
 
-
     public void updateEntryList(){
-        domainPanel.removeAll();
+        BorderLayout layout = (BorderLayout)infoPanel.getLayout();
+        infoPanel.remove(layout.getLayoutComponent(BorderLayout.WEST));
+        setupEntryList();
+    }
+
+    public void setupEntryList(){
 
         DefaultListModel<String> model = new DefaultListModel<>();
         for (String domain:registeredDomains){
@@ -125,6 +134,7 @@ public class GUI {
         DomainList list = new DomainList(model);
 
         JScrollPane scrollPane = new JScrollPane(list);
+
         infoPanel.add(scrollPane,BorderLayout.WEST);
         infoFrame.revalidate();
     }
@@ -140,12 +150,18 @@ public class GUI {
         myPanel.add(new EntryText());
         myPanel.add(new JLabel("Password"));
         myPanel.add(new EntryText());
+        myPanel.add(error);
 
         myPanel.revalidate();
 
-        myJFrame.setSize(500, 500);
+        myJFrame.setSize(300, 200);
         myJFrame.setLocationRelativeTo(null);
         myJFrame.setVisible(true);
+    }
+
+    public void updateError(String message){
+        error.setText(message);
+        myPanel.revalidate();
     }
 
 
@@ -167,7 +183,7 @@ public class GUI {
             int row = getSelectedIndex();
             String domain = (String) getSelectedValue();
             if (row!=-1){
-                System.out.println(row+"    "+domain);
+//                System.out.println(row+"    "+domain);
                 entryRead(domain.getBytes());
                 updateDetailsPage(domain);
             }
@@ -224,7 +240,8 @@ public class GUI {
             byte[] password = ((EntryText)myPanel.getComponent(5)).getText().getBytes();
 
             if (domain.length==0 || username.length==0 || password.length==0) {
-                System.out.println("empty fields");
+                System.out.println("ERROR: MISSING FIELDS");
+                updateError("ERROR: MISSING FIELDS");
                 return;
             }
 
@@ -233,6 +250,7 @@ public class GUI {
                 Response response = handler.clientWriteRead(new byte[][]{domain,username,password});
                 if (response.data==null){
                     System.out.println(response.error);
+                    updateError(response.error);
                     return;
                 }
                 registeredDomains.add(new String(domain));
@@ -256,6 +274,7 @@ public class GUI {
         public void actionPerformed(ActionEvent e) {
             byte[] domain = this.getText().getBytes();
             entryRead(domain);
+            updateDetailsPage(new String(domain));
         }
     }
 }

@@ -13,18 +13,32 @@ import java.util.*;
 public class Manager{
     private EncryptionKey encryptionKey;
     private HMACKey hmacKey;
-    private final String root = "data/";
+    private String root;
     public LinkedList<String> registeredDomains = new LinkedList<>();
 
 
     //register
-    Manager(String password,boolean registering) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException, IOException, InvalidKeySpecException {
-        if (registering) register(password);
-        else login(password);
+    Manager(String username,String password,boolean registering) throws InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, NoSuchAlgorithmException, BadPaddingException, InvalidKeyException, IOException, InvalidKeySpecException {
+        if (registering) register(username,password);
+        else login(username,password);
     }
 
-    private void register(String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
-        File directory = new File(root);
+    private void register(String username,String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+
+        File start = new File("users");
+        if (!start.exists())start.mkdir();
+
+
+        String hash = MyKeyGenerator.generateHash(username);
+        hash = filter(hash);
+        System.out.println(hash);
+
+        File directory = new File("users/"+hash);
+        if (directory.exists()){
+            throw new RuntimeException("ERROR: USERNAME TAKEN");
+        }
+        root = "users/"+hash+"/";
+
         directory.mkdir();
         String path = root+"control.vault";
         File myObj = new File(path);
@@ -32,7 +46,7 @@ public class Manager{
         String secret = MyKeyGenerator.generateRandomCharacterSequence();
         byte[] keySalt = MyKeyGenerator.generateSalt();
 
-        byte[] keyData = MyKeyGenerator.generateHash(password+secret,keySalt);
+        byte[] keyData = MyKeyGenerator.generatePasswordHash(password+secret,keySalt);
         encryptionKey = new EncryptionKey(partial(keyData,0,32));
         hmacKey = new HMACKey(partial(keyData,32,32));
 
@@ -54,7 +68,17 @@ public class Manager{
         file.mkdir();
     }
 
-    private void login(String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+    private void login(String username,String password) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException {
+        String hash = new String(MyKeyGenerator.generateHash(username));
+        hash = filter(hash);
+
+        File directory = new File("users/"+hash);
+        if (!directory.exists()){
+            throw new RuntimeException("ERROR: UNRECOGNIZED USERNAME");
+        }
+        root = "users/"+hash+"/";
+
+
         String path = root+"control.vault";
 
         BufferedInputStream in = new BufferedInputStream(new FileInputStream(path));
@@ -72,7 +96,7 @@ public class Manager{
         byte[] test = data[3];
         byte[] discoveredMAC = data[4];
 
-        byte[] keyData = MyKeyGenerator.generateHash(password+secret,keySalt);
+        byte[] keyData = MyKeyGenerator.generatePasswordHash(password+secret,keySalt);
         encryptionKey = new EncryptionKey(partial(keyData,0,32));
         hmacKey = new HMACKey(partial(keyData,32,32));
 
@@ -116,16 +140,16 @@ public class Manager{
         byte[] paddedPassword = new byte[length];
 
         System.arraycopy(password,0,paddedPassword,0,password.length);
-        System.out.println("padded: "+Arrays.toString(paddedPassword));
-        System.out.println("non: "+Arrays.toString(password));
+//        System.out.println("padded: "+Arrays.toString(paddedPassword));
+//        System.out.println("non: "+Arrays.toString(password));
 
         byte[] encryptedDomain = encryptionKey.encrypt(domain,IV);
         byte[] encryptedUsername = encryptionKey.encrypt(username,IV);
         byte[] encryptedPassword = encryptionKey.encrypt(paddedPassword,IV);
 //        byte[] encryptedPassword = encryptionKey.encrypt(password,IV);
 
-        System.out.println("encrypted: "+Arrays.toString(encryptedPassword));
-        System.out.println("length: "+encryptedPassword.length);
+//        System.out.println("encrypted: "+Arrays.toString(encryptedPassword));
+//        System.out.println("length: "+encryptedPassword.length);
 
         byte[] HMACData = combine(new byte[][]{fileName.getBytes(),encryptedDomain,encryptedUsername,encryptedPassword,IV.getIV()});
         byte[] MAC = hmacKey.computeMAC(HMACData);
@@ -169,7 +193,7 @@ public class Manager{
         byte[][] data = ReadWrite.readData(in,5,(int)file.length());
         in.close();
 
-        System.out.println("REACHED");
+//        System.out.println("REACHED");
         byte[] encryptedDomain = data[0];
         byte[] encryptedUsername = data[1];
         byte[] encryptedPassword = data[2];
@@ -181,7 +205,7 @@ public class Manager{
         byte[] computedMAC = hmacKey.computeMAC(HMACData);
 
         if (!Arrays.equals(discoveredMAC,computedMAC)) {
-            System.out.println("BAD MAC");
+            throw new RuntimeException("ERROR: BAD MAC");
         }
 
         byte[] domain = encryptionKey.decrypt(encryptedDomain,IV);
@@ -189,20 +213,20 @@ public class Manager{
 //        byte[] password = encryptionKey.decrypt(encryptedPassword,IV);
         byte[] paddedPassword = encryptionKey.decrypt(encryptedPassword,IV);
 
-        System.out.println("REACHED");
-        System.out.println(Arrays.toString(paddedPassword));
+//        System.out.println("REACHED");
+//        System.out.println(Arrays.toString(paddedPassword));
 
         int i=0;
         while (paddedPassword[i]!=(byte)0){
             i++;
         }
 
-        System.out.println(i);
+//        System.out.println(i);
         byte[] password = new byte[i];
         System.arraycopy(paddedPassword,0,password,0,i);
 
-        System.out.println("padded: "+Arrays.toString(paddedPassword));
-        System.out.println("non: "+Arrays.toString(password));
+//        System.out.println("padded: "+Arrays.toString(paddedPassword));
+//        System.out.println("non: "+Arrays.toString(password));
 
         return new byte[][]{domain,username,password};
     }

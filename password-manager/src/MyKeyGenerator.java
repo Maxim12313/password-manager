@@ -1,11 +1,11 @@
-import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-import javax.crypto.spec.SecretKeySpec;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.util.Base64;
 
 public class MyKeyGenerator {
 
@@ -36,7 +36,14 @@ public class MyKeyGenerator {
         return bytes;
     }
 
-    public static byte[] generateHash(String input, byte[] salt) throws NoSuchAlgorithmException, InvalidKeySpecException {
+    public static String generateHash(String input) throws NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] encodedHash = digest.digest(input.getBytes());
+        return Base64.getEncoder().encodeToString(encodedHash);
+    }
+
+
+    public static byte[] generatePasswordHash(String input, byte[] salt) throws NoSuchAlgorithmException, InvalidKeySpecException {
         int iterations = 100_000;
         int keyLength = 512; //first half 256 encryption aes, second half 256 hmac
         KeySpec spec = new PBEKeySpec(input.toCharArray(), salt, iterations, keyLength);

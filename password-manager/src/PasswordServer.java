@@ -46,7 +46,7 @@ public class PasswordServer {
                         continue;
                     }
                     char protocol = (char)read;
-                    System.out.println("protocol: "+protocol);
+//                    System.out.println("protocol: "+protocol);
 
                     if (protocol=='c'){
                         CreateEntryHandler handler = new CreateEntryHandler(in,out,manager);
